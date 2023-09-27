@@ -10,7 +10,7 @@ Install `circom` and `nodejs v18`
 yarn
 ```
 
-#### Build circuits
+#### Build circuits (dev only, not secure)
 
 ```bash
 ./scripts/build_circuit.sh
