@@ -1,0 +1,80 @@
+import { hash } from "./computeEContent";
+import { DataHash } from "./types";
+import { assembleEContent, formatAndConcatenateDataHashes, formatMrz, parsePubKeyString } from "./utils";
+import * as forge from 'node-forge';
+
+const sampleMRZ = "P<FRADUPONT<<ALPHONSE<HUGUES<ALBERT<<<<<<<<<24HB818324FRA0402111M3111115<<<<<<<<<<<<<<02"
+const sampleDataHashes = [
+  [
+    2,
+    [ -66, 82, -76, -21, -34, 33, 79, 50, -104, -120, -114, 35, 116, -32, 6, -14, -100, -115, -128, -8, 10, 61, 98, 86, -8, 45, -49, -46, 90, -24, -81, 38]
+  ],
+  [
+    3,
+    [ 0, -62, 104, 108, -19, -10, 97, -26, 116, -58, 69, 110, 26, 87, 17, 89, 110, -57, 108, -6, 36, 21, 39, 87, 110, 102, -6, -43, -82, -125, -85, -82]
+  ],
+  [
+    11,
+    [ -120, -101, 87, -112, 111, 15, -104, 127, 85, 25, -102, 81, 20, 58, 51, 75, -63, 116, -22, 0, 60, 30, 29, 30, -73, -115, 72, -9, -1, -53, 100, 124]
+  ],
+  [
+    12,
+    [ 41, -22, 106, 78, 31, 11, 114, -119, -19, 17, 92, 71, -122, 47, 62, 78, -67, -23, -55, -42, 53, 4, 47, -67, -55, -123, 6, 121, 34, -125, 64, -114]
+  ],
+  [
+    13,
+    [ 91, -34, -46, -63, 62, -34, 104, 82, 36, 41, -118, -3, 70, 15, -108, -48, -100, 45, 105, -85, -15, -61, -71, 43, -39, -94, -110, -55, -34, 89, -18, 38]
+  ],
+  [
+    14,
+    [ 76, 123, -40, 13, 51, -29, 72, -11, 59, -63, -18, -90, 103, 49, 23, -92, -85, -68, -62, -59, -100, -69, -7, 28, -58, 95, 69, 15, -74, 56, 54, 38]
+  ]
+]
+const sampleTimeOfSig = [49, 15, 23, 13, 49, 57, 49, 50, 49, 54, 49, 55, 50, 50, 51, 56, 90]
+
+export async function genSampleData() {
+  const mrzHash = hash(formatMrz(sampleMRZ));
+  sampleDataHashes.unshift([1, mrzHash]);
+  const concatenatedDataHashes = formatAndConcatenateDataHashes(
+    mrzHash,
+    sampleDataHashes as DataHash[],
+  );
+  const eContent = assembleEContent(
+    hash(concatenatedDataHashes),
+    sampleTimeOfSig,
+  );
+
+  const rsa = forge.pki.rsa;
+  const privKey = rsa.generateKeyPair({bits: 2048}).privateKey;
+  const modulus = privKey.n.toString(16);
+
+  const md = forge.md.sha256.create();
+  md.update(forge.util.binary.raw.encode(new Uint8Array(eContent)));
+
+  const signature = privKey.sign(md)
+  const signatureBytes = Array.from(signature, c => c.charCodeAt(0));
+  
+  // console.log('modulus', modulus)
+  // const signatureHex = forge.util.bytesToHex(signature);
+  // console.log('signatureString', signatureHex)
+
+  // Signature verification
+  const hashOfEContent = md.digest().getBytes();
+  const publicKey = rsa.setPublicKey(
+    new forge.jsbn.BigInteger(modulus, 16),
+    new forge.jsbn.BigInteger("10001", 16),
+  );
+  const valid = publicKey.verify(hashOfEContent, signature);
+  console.log('valid ?', valid)
+
+  return {
+    "mrz": sampleMRZ,
+    modulus: modulus,
+    "dataGroupHashes": sampleDataHashes,
+    // "eContent": [ 49, 102, 48, 21, 6, 9, 42, -122, 72, -122, -9, 13, 1, 9, 3, 49, 8, 6, 6, 103, -127, 8, 1, 1, 1, 48, 28, 6, 9, 42, -122, 72, -122, -9, 13, 1, 9, 5, 49, 15, 23, 13, 49, 57, 49, 50, 49, 54, 49, 55, 50, 50, 51, 56, 90, 48, 47, 6, 9, 42, -122, 72, -122, -9, 13, 1, 9, 4, 49, 34, 4, 32, -80, 96, 59, -43, -125, 82, 89, -8, 105, 125, 37, -79, -98, -94, -119, 43, 13, 39, 115, 6, 59, -27, 81, 110, 49, 75, -1, -72, -101, 73, 116, 86],
+    "eContent": eContent,
+    "encryptedDigest": signatureBytes,
+  }
+}
+
+
