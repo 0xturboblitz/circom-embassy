@@ -2,7 +2,7 @@
 
 #### Requirements
 
-Install `circom` and `nodejs v18`.
+Install `circom` and `nodejs v18`
 
 #### Installation
 

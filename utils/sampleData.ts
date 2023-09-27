@@ -1,6 +1,6 @@
 import { hash } from "./computeEContent";
 import { DataHash } from "./types";
-import { assembleEContent, formatAndConcatenateDataHashes, formatMrz, parsePubKeyString } from "./utils";
+import { assembleEContent, formatAndConcatenateDataHashes, formatMrz } from "./utils";
 import * as forge from 'node-forge';
 
 const sampleMRZ = "P<FRADUPONT<<ALPHONSE<HUGUES<ALBERT<<<<<<<<<24HB818324FRA0402111M3111115<<<<<<<<<<<<<<02"
@@ -54,10 +54,6 @@ export async function genSampleData() {
   const signature = privKey.sign(md)
   const signatureBytes = Array.from(signature, c => c.charCodeAt(0));
   
-  // console.log('modulus', modulus)
-  // const signatureHex = forge.util.bytesToHex(signature);
-  // console.log('signatureString', signatureHex)
-
   // Signature verification
   const hashOfEContent = md.digest().getBytes();
   const publicKey = rsa.setPublicKey(
@@ -71,7 +67,6 @@ export async function genSampleData() {
     "mrz": sampleMRZ,
     modulus: modulus,
     "dataGroupHashes": sampleDataHashes,
-    // "eContent": [ 49, 102, 48, 21, 6, 9, 42, -122, 72, -122, -9, 13, 1, 9, 3, 49, 8, 6, 6, 103, -127, 8, 1, 1, 1, 48, 28, 6, 9, 42, -122, 72, -122, -9, 13, 1, 9, 5, 49, 15, 23, 13, 49, 57, 49, 50, 49, 54, 49, 55, 50, 50, 51, 56, 90, 48, 47, 6, 9, 42, -122, 72, -122, -9, 13, 1, 9, 4, 49, 34, 4, 32, -80, 96, 59, -43, -125, 82, 89, -8, 105, 125, 37, -79, -98, -94, -119, 43, 13, 39, 115, 6, 59, -27, 81, 110, 49, 75, -1, -72, -101, 73, 116, 86],
     "eContent": eContent,
     "encryptedDigest": signatureBytes,
   }

@@ -1,7 +1,5 @@
 pragma circom 2.1.5;
 
-// include "../node_modules/circomlib/circuits/bitify.circom";
-// include "./sha/sha.circom";
 include "./rsa/rsa.circom";
 include "./sha256Bytes.circom";
 include "../node_modules/circomlib/circuits/sha256/sha256.circom";

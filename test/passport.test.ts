@@ -1,6 +1,6 @@
 import { describe } from 'mocha'
 import { assert } from 'chai'
-import { arraysAreEqual, assembleEContent, assembleMrz, bytesToBigDecimal, findTimeOfSignature, formatAndConcatenateDataHashes, formatMrz, hexToDecimal, parsePubKeyString, splitToWords, toBinaryString } from '../utils/utils'
+import { arraysAreEqual, bytesToBigDecimal, findTimeOfSignature, formatAndConcatenateDataHashes, formatMrz, hexToDecimal, parsePubKeyString, splitToWords, toBinaryString } from '../utils/utils'
 import { groth16 } from 'snarkjs'
 import { hash, toUnsignedByte } from '../utils/computeEContent'
 import { DataHash, PassportData } from '../utils/types'
@@ -35,12 +35,12 @@ describe('Circuit tests', function () {
 
     assert(
       arraysAreEqual(passportData.eContent.slice(72, 72 + 32), concatenatedDataHashesHashDigest),
-      'concatenatedDataHashesHashDigest is at the right place of passportData.eContent'
+      'concatenatedDataHashesHashDigest is at the right place in passportData.eContent'
     )
 
     const reveal_bitmap = Array.from({ length: 88 }, (_, i) => (i >= 16 && i <= 22) ? '1' : '0');
 
-    const input = {
+    const inputs = {
       mrz: Array.from(formattedMrz).map(byte => String(byte)),
       reveal_bitmap: Array.from(reveal_bitmap).map(byte => String(byte)),
       dataHashes: Array.from(concatenatedDataHashes.map(toUnsignedByte)).map(byte => String(byte)),
@@ -55,33 +55,19 @@ describe('Circuit tests', function () {
         BigInt(64),
         BigInt(32)
       ),
-      // eContent: splitToWords(
-      //   BigInt(bytesToBigDecimal(passportData.eContent)),
-      //   BigInt(64),
-      //   BigInt(32)
-      // ),
-      // hashOfEContent: splitToWords(
-      //   hashBigNumber,
-      //   BigInt(64),
-      //   BigInt(32)
-      // ),
     }
 
-    console.log('input', input)
+    console.log('inputs', inputs)
 
     const { proof, publicSignals } = await groth16.fullProve(
-      input,
+      inputs,
       "build/passport_js/passport.wasm",
       "build/passport_final.zkey"
     )
 
     console.log('proof done');
-    console.log('proof', proof)
-    console.log('publicSignals', publicSignals)
-
-    // Write proof and publicSignals to file
-    // fs.writeFileSync("proof.json", JSON.stringify(proof));
-    // fs.writeFileSync("publicSignals.json", JSON.stringify(publicSignals));
+    // console.log('proof', proof)
+    // console.log('publicSignals', publicSignals)
 
     const revealChars = publicSignals.slice(0, 88).map((byte: string) => String.fromCharCode(parseInt(byte, 10))).join('');
 
@@ -94,6 +80,7 @@ describe('Circuit tests', function () {
       publicSignals,
       proof
     )
+
     assert(verified == true, 'Should verifiable')
 
     console.log('proof verified');
