@@ -22,5 +22,6 @@ yarn
 yarn test
 ```
 
-This will run tests will sample data generated on the fly.
+This will run tests with sample data generated on the fly.
+
 To run tests with your own passport data, extract your `passportData.json` using the app (available soon), place it in `inputs/`, then run `yarn test`
