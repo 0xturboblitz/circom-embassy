@@ -1,5 +1,9 @@
 # Embassy
 
+Embassy circuits verify signatures of passport-emitting authorities.
+
+🚧 under heavy development 🚧
+
 #### Requirements
 
 Install `circom` and `nodejs v18`
