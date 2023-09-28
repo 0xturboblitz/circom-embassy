@@ -39,14 +39,6 @@ const concatenatedDataHashes = formatAndConcatenateDataHashes(
   dataHashes,
 );
 
-console.log(
-  'concatenatedDataHashes === passportData.contentBytes.content.string ?',
-  arraysAreEqual(
-    concatenatedDataHashes,
-    passportData.contentBytes.content.string,
-  ),
-);
-
 const concatenatedDataHashesHashDigest = hash(concatenatedDataHashes);
 
 // check that concatenatedDataHashesHashDigest is at the right place of passportData.eContent
@@ -62,7 +54,7 @@ console.log(
 // Create the public key
 const rsa = forge.pki.rsa;
 const publicKey = rsa.setPublicKey(
-  new forge.jsbn.BigInteger(passportData.modulus, 16),
+  new forge.jsbn.BigInteger(passportData.modulus, 10),
   new forge.jsbn.BigInteger("10001", 16),
 );
 
@@ -71,14 +63,9 @@ const md = forge.md.sha256.create();
 md.update(forge.util.binary.raw.encode(new Uint8Array(passportData.eContent)));
 const hashOfEContent = md.digest().getBytes();
 
-console.log('modulus', hexToDecimal(passportData.modulus));
+console.log('modulus', passportData.modulus);
 console.log('eContent', bytesToBigDecimal(passportData.eContent));
 console.log('signature', bytesToBigDecimal(passportData.encryptedDigest));
-// Convert the hash to a single decimal number
-
-const hashBigNumber = BigInt('0x' + forge.util.bytesToHex(hashOfEContent));
-
-console.log('hashOfEContent in big decimal', hashBigNumber.toString());
 
 // Signature verification
 const signatureBytes = Buffer.from(passportData.encryptedDigest).toString(
@@ -97,5 +84,3 @@ function hash(bytesArray: number[]): number[] {
   hash.update(Buffer.from(bytesArray));
   return Array.from(hash.digest()).map(x => (x < 128 ? x : x - 256));
 }
-
-genSampleData()

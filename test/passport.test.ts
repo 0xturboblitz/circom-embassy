@@ -1,10 +1,9 @@
 import { describe } from 'mocha'
 import { assert } from 'chai'
-import { arraysAreEqual, bytesToBigDecimal, findTimeOfSignature, formatAndConcatenateDataHashes, formatMrz, hexToDecimal, parsePubKeyString, splitToWords, toBinaryString } from '../utils/utils'
+import { arraysAreEqual, bytesToBigDecimal, formatAndConcatenateDataHashes, formatMrz, hexToDecimal, splitToWords } from '../utils/utils'
 import { groth16 } from 'snarkjs'
 import { hash, toUnsignedByte } from '../utils/computeEContent'
 import { DataHash, PassportData } from '../utils/types'
-import * as forge from 'node-forge';
 import { genSampleData } from '../utils/sampleData'
 const fs = require('fs');
 
@@ -33,6 +32,8 @@ describe('Circuit tests', function () {
     
     const concatenatedDataHashesHashDigest = hash(concatenatedDataHashes);
 
+    console.log('concatenatedDataHashesHashDigest', concatenatedDataHashesHashDigest)
+    console.log('passportData.eContent.slice(72, 72 + 32)', passportData.eContent.slice(72, 72 + 32))
     assert(
       arraysAreEqual(passportData.eContent.slice(72, 72 + 32), concatenatedDataHashesHashDigest),
       'concatenatedDataHashesHashDigest is at the right place in passportData.eContent'
@@ -51,7 +52,7 @@ describe('Circuit tests', function () {
         BigInt(32)
       ),
       pubkey: splitToWords(
-        BigInt(hexToDecimal(passportData.modulus)),
+        BigInt(passportData.modulus),
         BigInt(64),
         BigInt(32)
       ),

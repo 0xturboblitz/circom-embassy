@@ -160,7 +160,7 @@ export function assembleEContent(
   return constructedEContent;
 }
 
-export const toBinaryString = (byte) => {
+export const toBinaryString = (byte: any) => {
   const binary = (parseInt(byte, 10) & 0xFF).toString(2).padStart(8, '0');
   return binary;
 };

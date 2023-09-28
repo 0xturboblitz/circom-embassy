@@ -20,13 +20,8 @@ export type DataHash = [number, number[]];
 
 export type PassportData = {
   mrz: string;
-  mrzInfo?: MrzInfo;
   modulus: string;
-  publicKey?: any;
-  publicKeyPEM?: string;
   dataGroupHashes: DataHash[];
-  eContent: any;
-  encryptedDigest: any;
-  contentBytes?: any;
-  eContentDecomposed?: any;
+  eContent: number[];
+  encryptedDigest: number[];
 };

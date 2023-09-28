@@ -1,43 +1,4 @@
-import {PassportData} from './types';
-import {
-  arraysAreEqual,
-  assembleEContent,
-  assembleMrz,
-  findTimeOfSignature,
-  formatAndConcatenateDataHashes,
-  formatMrz,
-} from './utils';
 import {sha256} from 'js-sha256';
-
-export function computeAndCheckEContent(passportData: PassportData) {
-  const mrz = assembleMrz(passportData.mrzInfo);
-  const dataHashes = passportData.dataGroupHashes;
-  const mrzHash = hash(formatMrz(mrz));
-
-  if (!arraysAreEqual(mrzHash, dataHashes[0][1])) {
-    throw new Error('MRZ hash does not match data group hash 1');
-  }
-
-  const concatenatedDataHashes = formatAndConcatenateDataHashes(
-    mrzHash,
-    dataHashes,
-  );
-
-  if (
-    !arraysAreEqual(
-      concatenatedDataHashes,
-      passportData.contentBytes.content.string,
-    )
-  ) {
-    throw new Error('Concatenated data hashes do not match content bytes');
-  }
-
-  const concatenatedDataHashesHashDigest = hash(concatenatedDataHashes);
-
-  const timeOfSignature = findTimeOfSignature(passportData.eContentDecomposed);
-
-  return assembleEContent(concatenatedDataHashesHashDigest, timeOfSignature);
-}
 
 // hash logic here because the one in utils.ts only works with node
 export function hash(bytesArray: number[]) {
