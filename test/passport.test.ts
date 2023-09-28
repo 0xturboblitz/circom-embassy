@@ -1,5 +1,6 @@
 import { describe } from 'mocha'
-import { assert } from 'chai'
+import chai, { assert, expect } from 'chai'
+import chaiAsPromised from 'chai-as-promised'
 import { arraysAreEqual, bytesToBigDecimal, formatAndConcatenateDataHashes, formatMrz, hexToDecimal, splitToWords } from '../utils/utils'
 import { groth16 } from 'snarkjs'
 import { hash, toUnsignedByte } from '../utils/computeEContent'
@@ -7,10 +8,13 @@ import { DataHash, PassportData } from '../utils/types'
 import { genSampleData } from '../utils/sampleData'
 const fs = require('fs');
 
+chai.use(chaiAsPromised)
+
 describe('Circuit tests', function () {
   this.timeout(0)
 
   let passportData: PassportData;
+  let inputs: any;
 
   this.beforeAll(async () => {
     if (fs.existsSync('inputs/passportData.json')) {
@@ -20,9 +24,7 @@ describe('Circuit tests', function () {
       fs.mkdirSync('inputs');
       fs.writeFileSync('inputs/passportData.json', JSON.stringify(passportData));
     }
-  })
 
-  it('can prove and verify with valid inputs', async function () {
     const formattedMrz = formatMrz(passportData.mrz);
     const mrzHash = hash(formatMrz(passportData.mrz));
     const concatenatedDataHashes = formatAndConcatenateDataHashes(
@@ -32,8 +34,8 @@ describe('Circuit tests', function () {
     
     const concatenatedDataHashesHashDigest = hash(concatenatedDataHashes);
 
-    console.log('concatenatedDataHashesHashDigest', concatenatedDataHashesHashDigest)
-    console.log('passportData.eContent.slice(72, 72 + 32)', passportData.eContent.slice(72, 72 + 32))
+    // console.log('concatenatedDataHashesHashDigest', concatenatedDataHashesHashDigest)
+    // console.log('passportData.eContent.slice(72, 72 + 32)', passportData.eContent.slice(72, 72 + 32))
     assert(
       arraysAreEqual(passportData.eContent.slice(72, 72 + 32), concatenatedDataHashesHashDigest),
       'concatenatedDataHashesHashDigest is at the right place in passportData.eContent'
@@ -41,7 +43,7 @@ describe('Circuit tests', function () {
 
     const reveal_bitmap = Array.from({ length: 88 }, (_, i) => (i >= 16 && i <= 22) ? '1' : '0');
 
-    const inputs = {
+    inputs = {
       mrz: Array.from(formattedMrz).map(byte => String(byte)),
       reveal_bitmap: Array.from(reveal_bitmap).map(byte => String(byte)),
       dataHashes: Array.from(concatenatedDataHashes.map(toUnsignedByte)).map(byte => String(byte)),
@@ -57,7 +59,10 @@ describe('Circuit tests', function () {
         BigInt(32)
       ),
     }
-
+    
+  })
+  
+  it('should prove and verify with valid inputs', async function () {
     console.log('inputs', inputs)
 
     const { proof, publicSignals } = await groth16.fullProve(
@@ -67,15 +72,11 @@ describe('Circuit tests', function () {
     )
 
     console.log('proof done');
-    // console.log('proof', proof)
-    // console.log('publicSignals', publicSignals)
 
     const revealChars = publicSignals.slice(0, 88).map((byte: string) => String.fromCharCode(parseInt(byte, 10))).join('');
-
     console.log('reveal chars', revealChars);
 
     const vKey = JSON.parse(fs.readFileSync("build/verification_key.json"));
-
     const verified = await groth16.verify(
       vKey,
       publicSignals,
@@ -85,5 +86,44 @@ describe('Circuit tests', function () {
     assert(verified == true, 'Should verifiable')
 
     console.log('proof verified');
+  })
+
+  it('should fail to prove with invalid mrz', async function () {
+    const invalidInputs = {
+      ...inputs,
+      mrz: inputs.mrz.map((byte: string) => String((parseInt(byte, 10) + 1) % 256)),
+    }
+
+    return expect(groth16.fullProve(
+      invalidInputs,
+      "build/passport_js/passport.wasm",
+      "build/passport_final.zkey"
+    )).to.be.rejected;
+  })
+
+  it('should fail to prove with invalid eContentBytes', async function () {
+    const invalidInputs = {
+      ...inputs,
+      eContentBytes: inputs.eContentBytes.map((byte: string) => String((parseInt(byte, 10) + 1) % 256)),
+    }
+
+    return expect(groth16.fullProve(
+      invalidInputs,
+      "build/passport_js/passport.wasm",
+      "build/passport_final.zkey"
+    )).to.be.rejected;
+  })
+  
+  it('should fail to prove with invalid signature', async function () {
+    const invalidInputs = {
+      ...inputs,
+      signature: inputs.signature.map((byte: string) => String((parseInt(byte, 10) + 1) % 256)),
+    }
+
+    return expect(groth16.fullProve(
+      invalidInputs,
+      "build/passport_js/passport.wasm",
+      "build/passport_final.zkey"
+    )).to.be.rejected;
   })
 })
