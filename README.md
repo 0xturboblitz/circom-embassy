@@ -1,5 +1,9 @@
 # Embassy
 
+Embassy circuits verify signatures of passport-emitting authorities.
+
+🚧 under heavy development 🚧
+
 #### Requirements
 
 Install `circom` and `nodejs v18`
@@ -22,5 +26,6 @@ yarn
 yarn test
 ```
 
-This will run tests will sample data generated on the fly.
+This will run tests with sample data generated on the fly.
+
 To run tests with your own passport data, extract your `passportData.json` using the app (available soon), place it in `inputs/`, then run `yarn test`
