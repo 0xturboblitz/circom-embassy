@@ -44,10 +44,10 @@ describe('Circuit tests', function () {
     const reveal_bitmap = Array.from({ length: 88 }, (_, i) => (i >= 16 && i <= 22) ? '1' : '0');
 
     inputs = {
-      mrz: Array.from(formattedMrz).map(byte => String(byte)),
-      reveal_bitmap: Array.from(reveal_bitmap).map(byte => String(byte)),
-      dataHashes: Array.from(concatenatedDataHashes.map(toUnsignedByte)).map(byte => String(byte)),
-      eContentBytes: Array.from(passportData.eContent.map(toUnsignedByte)).map(byte => String(byte)),
+      mrz: formattedMrz.map(byte => String(byte)),
+      reveal_bitmap: reveal_bitmap.map(byte => String(byte)),
+      dataHashes: concatenatedDataHashes.map(toUnsignedByte).map(byte => String(byte)),
+      eContentBytes: passportData.eContent.map(toUnsignedByte).map(byte => String(byte)),
       signature: splitToWords(
         BigInt(bytesToBigDecimal(passportData.encryptedDigest)),
         BigInt(64),
@@ -125,5 +125,87 @@ describe('Circuit tests', function () {
       "build/passport_js/passport.wasm",
       "build/passport_final.zkey"
     )).to.be.rejected;
+  })
+
+  it('should support selective disclosure', async function () {
+    const attributeToPosition = {
+      issuing_state: [2, 4],
+      name: [5, 43],
+      passport_number: [44, 52],
+      nationality: [54, 56],
+      date_of_birth: [57, 63],
+      gender: [65],
+      expiry_date: [66, 72],
+    }
+
+    const attributeToReveal = {
+      issuing_state: false,
+      name: false,
+      passport_number: false,
+      nationality: true,
+      date_of_birth: false,
+      gender:false,
+      expiry_date: false,
+    }
+
+    const bitmap = Array.from({ length: 88 }, (_) => '0');
+
+    for(const attribute in attributeToReveal) {
+      if (attributeToReveal[attribute]) {
+        const [start, end] = attributeToPosition[attribute];
+        for(let i = start; i <= end; i++) {
+          bitmap[i] = '1';
+        }
+      }
+    }
+
+    inputs = {
+      ...inputs,
+      reveal_bitmap: bitmap.map(byte => String(byte)),
+    }
+
+    const { proof, publicSignals } = await groth16.fullProve(
+      inputs,
+      "build/passport_js/passport.wasm",
+      "build/passport_final.zkey"
+    )
+
+    console.log('proof done');
+    const revealChars = publicSignals.slice(0, 88).map((byte: string) => String.fromCharCode(parseInt(byte, 10)))
+
+    console.log('revealChars', revealChars)
+
+    for(let i = 0; i < revealChars.length; i++) {
+      if (bitmap[i] == '1') {
+        assert(revealChars[i] != '\x00', 'Should reveal');
+      } else {
+        assert(revealChars[i] == '\x00', 'Should not reveal');
+      }
+    }
+
+    const reveal: Record<string, string | undefined> = {};
+
+    Object.keys(attributeToPosition).forEach((attribute) => {
+      if (attributeToReveal[attribute]) {
+        const [start, end] = attributeToPosition[attribute];
+        const value = revealChars.slice(start, end + 1).join('');
+        reveal[attribute] = value;
+      } else {
+        reveal[attribute] = undefined;
+      }
+    });
+
+    console.log('reveal', reveal)
+
+    const vKey = JSON.parse(fs.readFileSync("build/verification_key.json"));
+    const verified = await groth16.verify(
+      vKey,
+      publicSignals,
+      proof
+    )
+
+    assert(verified == true, 'Should verifiable')
+
+    console.log('proof verified');
   })
 })
